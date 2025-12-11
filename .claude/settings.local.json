@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tauri icon --help:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(powershell:*)",
+      "Bash(npx tauri icon:*)",
+      "Bash(npm run tauri dev)",
+      "Bash(dir /b \"e:\\rust_projects\\notice\\src\\views\")",
+      "Bash(npm install vue-tsc@^2.0.0 --save-dev)",
+      "Bash(npm run tauri build)",
+      "Bash(del:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
