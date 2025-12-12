@@ -152,6 +152,12 @@ async function handleDelete() {
   flex-direction: column;
 }
 
+.home-container :deep(.v-main) {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 .fab-settings {
   position: fixed;
   bottom: 120px;

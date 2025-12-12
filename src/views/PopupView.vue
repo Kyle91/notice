@@ -15,25 +15,26 @@
 
       <!-- 提醒内容 -->
       <v-card v-else-if="reminder" class="fill-height d-flex flex-column" elevation="0">
-        <v-card-title class="text-h5 text-center pt-6">
+        <v-card-title class="text-subtitle-1 text-center pt-3 pb-1">
           {{ reminder.title }}
         </v-card-title>
 
-        <v-card-text class="text-center flex-grow-1">
-          <p v-if="reminder.content" class="text-body-1 mb-4">
+        <v-card-text class="text-center flex-grow-1 py-1">
+          <p v-if="reminder.content" class="text-body-2 mb-2">
             {{ reminder.content }}
           </p>
 
           <!-- 链接 -->
-          <div v-if="reminder.links && reminder.links.length > 0" class="d-flex justify-center flex-wrap gap-2 mb-4">
+          <div v-if="reminder.links && reminder.links.length > 0" class="d-flex justify-center flex-wrap gap-1 mb-2">
             <v-chip
               v-for="(link, index) in reminder.links"
               :key="index"
               color="primary"
               variant="tonal"
+              size="small"
               @click="openLink(link.url)"
             >
-              <v-icon start>mdi-link</v-icon>
+              <v-icon start size="small">mdi-link</v-icon>
               {{ link.name }}
             </v-chip>
           </div>
@@ -41,18 +42,18 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="justify-center pa-4">
-          <v-btn variant="text" @click="handleDismiss" :disabled="actionLoading">关闭</v-btn>
-          <v-btn variant="outlined" @click="showSnoozeMenu = true" :disabled="actionLoading">稍后</v-btn>
-          <v-btn color="primary" variant="tonal" @click="handleComplete" :loading="actionLoading">完成</v-btn>
+        <v-card-actions class="justify-center pa-2">
+          <v-btn variant="text" size="small" @click="handleDismiss" :disabled="actionLoading">关闭</v-btn>
+          <v-btn variant="outlined" size="small" @click="showSnoozeMenu = true" :disabled="actionLoading">稍后</v-btn>
+          <v-btn color="primary" variant="tonal" size="small" @click="handleComplete" :loading="actionLoading">完成</v-btn>
         </v-card-actions>
       </v-card>
 
       <!-- 延迟菜单 -->
-      <v-dialog v-model="showSnoozeMenu" max-width="300">
+      <v-dialog v-model="showSnoozeMenu" max-width="240">
         <v-card>
-          <v-card-title>延迟提醒</v-card-title>
-          <v-list>
+          <v-card-title class="text-subtitle-1">延迟提醒</v-card-title>
+          <v-list density="compact">
             <v-list-item
               v-for="option in snoozeOptions"
               :key="option.value"

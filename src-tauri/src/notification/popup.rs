@@ -1,4 +1,12 @@
 use tauri::{AppHandle, Manager, WebviewWindowBuilder, WebviewUrl, PhysicalPosition};
+use std::sync::Mutex;
+use std::collections::VecDeque;
+
+/// 最大同时显示的弹窗数量
+const MAX_VISIBLE_POPUPS: usize = 5;
+
+/// 等待显示的弹窗队列
+static POPUP_QUEUE: Mutex<VecDeque<String>> = Mutex::new(VecDeque::new());
 
 /// 获取当前已有的弹窗数量
 fn get_popup_count(app: &AppHandle) -> usize {
@@ -8,7 +16,27 @@ fn get_popup_count(app: &AppHandle) -> usize {
         .count()
 }
 
+/// 尝试从队列中显示下一个弹窗
+pub fn try_show_next_popup(app: &AppHandle) {
+    let next_uuid = {
+        let mut queue = POPUP_QUEUE.lock().unwrap();
+        if get_popup_count(app) < MAX_VISIBLE_POPUPS {
+            queue.pop_front()
+        } else {
+            None
+        }
+    };
+
+    if let Some(uuid) = next_uuid {
+        let _ = show_reminder_popup_internal(app, &uuid, false);
+    }
+}
+
 pub fn show_reminder_popup(app: &AppHandle, reminder_uuid: &str) -> Result<(), Box<dyn std::error::Error>> {
+    show_reminder_popup_internal(app, reminder_uuid, true)
+}
+
+fn show_reminder_popup_internal(app: &AppHandle, reminder_uuid: &str, allow_queue: bool) -> Result<(), Box<dyn std::error::Error>> {
     let popup_label = format!("popup-{}", reminder_uuid);
 
     // 检查弹窗是否已存在，如果存在则聚焦
@@ -17,12 +45,22 @@ pub fn show_reminder_popup(app: &AppHandle, reminder_uuid: &str) -> Result<(), B
         return Ok(());
     }
 
-    // 获取当前弹窗数量，用于计算位置偏移
-    let popup_index = get_popup_count(app);
+    // 获取当前弹窗数量
+    let current_count = get_popup_count(app);
 
-    // 弹窗尺寸
-    let popup_width: f64 = 320.0;
-    let popup_height: f64 = 200.0;
+    // 如果超过最大数量，加入队列等待
+    if allow_queue && current_count >= MAX_VISIBLE_POPUPS {
+        let mut queue = POPUP_QUEUE.lock().unwrap();
+        // 避免重复加入队列
+        if !queue.contains(&reminder_uuid.to_string()) {
+            queue.push_back(reminder_uuid.to_string());
+        }
+        return Ok(());
+    }
+
+    // 弹窗尺寸 (缩小)
+    let popup_width: f64 = 280.0;
+    let popup_height: f64 = 160.0;
 
     // 获取主显示器信息来计算位置
     let position = if let Some(monitor) = app.primary_monitor()? {
@@ -31,9 +69,9 @@ pub fn show_reminder_popup(app: &AppHandle, reminder_uuid: &str) -> Result<(), B
         let scale_factor = monitor.scale_factor();
 
         // 边距
-        let margin: i32 = 20;
-        // 每个弹窗的垂直偏移
-        let offset_per_popup: i32 = ((popup_height + 10.0) * scale_factor) as i32;
+        let margin: i32 = 16;
+        // 每个弹窗的垂直偏移 (更紧凑)
+        let offset_per_popup: i32 = ((popup_height + 6.0) * scale_factor) as i32;
 
         // 计算物理像素尺寸
         let popup_physical_width = (popup_width * scale_factor) as i32;
@@ -43,7 +81,7 @@ pub fn show_reminder_popup(app: &AppHandle, reminder_uuid: &str) -> Result<(), B
         {
             // macOS: 右上角 (菜单栏在顶部，通知中心在右上角)
             let x = monitor_position.x + monitor_size.width as i32 - popup_physical_width - margin;
-            let y = monitor_position.y + margin + 30 + (popup_index as i32 * offset_per_popup);
+            let y = monitor_position.y + margin + 30 + (current_count as i32 * offset_per_popup);
             Some(PhysicalPosition::new(x, y))
         }
 
@@ -52,7 +90,7 @@ pub fn show_reminder_popup(app: &AppHandle, reminder_uuid: &str) -> Result<(), B
             // Windows/Linux: 右下角向上堆叠
             let x = monitor_position.x + monitor_size.width as i32 - popup_physical_width - margin;
             let base_y = monitor_position.y + monitor_size.height as i32 - popup_physical_height - margin - 50;
-            let y = base_y - (popup_index as i32 * offset_per_popup);
+            let y = base_y - (current_count as i32 * offset_per_popup);
             Some(PhysicalPosition::new(x, y))
         }
     } else {
@@ -94,6 +132,9 @@ pub fn close_reminder_popup(app: &AppHandle, reminder_uuid: &str) -> Result<(), 
     if let Some(window) = app.get_webview_window(&popup_label) {
         window.close()?;
     }
+
+    // 尝试显示队列中的下一个弹窗
+    try_show_next_popup(app);
 
     Ok(())
 }

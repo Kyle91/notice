@@ -79,7 +79,18 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // 窗口关闭时隐藏到托盘而不是退出
+            let label = window.label();
+
+            // 弹窗关闭时触发队列检查
+            if label.starts_with("popup-") {
+                if let WindowEvent::Destroyed = event {
+                    let app = window.app_handle();
+                    notification::popup::try_show_next_popup(app);
+                }
+                return;
+            }
+
+            // 主窗口关闭时隐藏到托盘而不是退出
             if let WindowEvent::CloseRequested { api, .. } = event {
                 let _ = window.hide();
                 api.prevent_close();
